@@ -42,7 +42,7 @@ bool Button::pressed() const
 }
 
 
-void main_task(intptr_t unused)
+void mainTask(intptr_t unused)
 {
 	const uint8_t robotAddress[6] = { 0xcc, 0x78, 0xab, 0x54, 0xd7, 0xd0 };
 	const char* password = "1234";
