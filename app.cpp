@@ -12,8 +12,8 @@ public:
 	bool pressed() const;
 private:
 	ev3::Function<bool()> stateFunc;
-	bool curr;
-	bool prev;
+	bool curr = false;
+	bool prev = false;
 };
 
 Button::Button(ev3::Function<bool()> stateFunc)
@@ -50,6 +50,7 @@ void mainTask(intptr_t unused)
 	ev3::TouchSensor buttonGrab(ev3::SensorPort::S3);
 	ev3::TouchSensor buttonPlace(ev3::SensorPort::S4);
 	ev3::TouchSensor buttonEmergencyStop(ev3::SensorPort::S1);
+	ev3::TouchSensor buttonAbortCurrentTask(ev3::SensorPort::S2);
 	ev3::Motor controlMotor(ev3::MotorPort::A, ev3::MotorType::Unregulated);
 
 	ev3::Speaker::playTone(ev3::Note::A4, 50);
@@ -63,12 +64,13 @@ void mainTask(intptr_t unused)
 		{ []()  { return ev3::Brick::isButtonPressed(ev3::BrickButton::Up);    } },
 		{ []()  { return ev3::Brick::isButtonPressed(ev3::BrickButton::Down);  } },
 		{ []()  { return ev3::Brick::isButtonPressed(ev3::BrickButton::Left);  } },
-		{ []()  { return ev3::Brick::isButtonPressed(ev3::BrickButton::Right); } },
+		{ []()  { return ev3::Brick::isButtonPressed(ev3::BrickButton::Right); } }
 	};
 
 	Button buttonsOther[] = {
 		{ [&]() { return buttonGrab.isPressed();							   } },
-		{ [&]() { return buttonPlace.isPressed();							   } }
+		{ [&]() { return buttonPlace.isPressed();							   } },
+		{ [&]() { return buttonAbortCurrentTask.isPressed();				   } }
 	};
 
 	uint8_t prevPowerPercent = 100;
@@ -103,7 +105,7 @@ void mainTask(intptr_t unused)
 			ev3::Console::write("<%d %d", p.cmd, p.data);
 		}
 
-		for (int i = 0; i < 2; i++)
+		for (int i = 0; i < 3; i++)
 		{
 			buttonsOther[i].update();
 			if (!buttonsOther[i].checkRelease()) { continue; }
@@ -126,7 +128,6 @@ void mainTask(intptr_t unused)
 			itoa(powerPercent, num, 10);
 			ev3::LCD::drawRect(20, 20, 38, 28, ev3::LCDColor::White);
 			ev3::LCD::drawString(num, 20, 20);
-
 		}
 	}
 
