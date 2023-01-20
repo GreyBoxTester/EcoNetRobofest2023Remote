@@ -1,19 +1,6 @@
 #include "app.h"
 #include "ev3lib.h"
-
-enum class Command : uint8_t
-{
-	DriveForward = 0,
-	DriveBackward,
-	TurnLeft,
-	TurnRight,
-	Stop,
-	GrabRubbish,
-	PlaceRubbish,
-	EmergencyStop,
-	SetPower
-};
-
+#include "Protocol.h"
 
 class Button
 {
@@ -68,7 +55,7 @@ void main_task(intptr_t unused)
 	ev3::Speaker::playTone(ev3::Note::A4, 50);
 	ev3::BluetoothMaster bt;
 	bt.connect(robotAddress, password);
-	while (!bt.connected()) { ev3::Time::sleep(10); }
+	while (!bt.connected()) { ev3::Time::delay(10); }
 	ev3::Speaker::playTone(ev3::Note::A4, 50);
 	ev3::Console::write("connected");
 
@@ -89,7 +76,9 @@ void main_task(intptr_t unused)
 	{
 		if (buttonEmergencyStop.isPressed()) 
 		{
-			bt.writeByte((uint8_t)Command::EmergencyStop);
+			Packet p = { Command::EmergencyStop, 0 };
+			bt.writeBytes(&p, sizeof(Packet));
+			ev3::Console::write("<%d %d", p.cmd, p.data);
 			break; 
 		}
 
@@ -101,23 +90,26 @@ void main_task(intptr_t unused)
 			anyButtonPressed = buttonsMoving[i].pressed() || anyButtonPressed;
 			anyButtonReleased = buttonsMoving[i].checkRelease() || anyButtonReleased;
 			if (!buttonsMoving[i].checkPush()) { continue; }
-			bt.writeByte(i);
-			ev3::Console::write("<%d", i);
+			Packet p = { (Command)i, 0 };
+			bt.writeBytes(&p, sizeof(Packet));
+			ev3::Console::write("<%d %d", p.cmd, p.data);
 			break;
 		}
 
 		if (!anyButtonPressed && anyButtonReleased)
 		{
-			bt.writeByte((uint8_t)Command::Stop);
-			ev3::Console::write("<%d", 4);
+			Packet p = { Command::Stop, 0 };
+			bt.writeBytes(&p, sizeof(Packet));
+			ev3::Console::write("<%d %d", p.cmd, p.data);
 		}
 
 		for (int i = 0; i < 2; i++)
 		{
 			buttonsOther[i].update();
 			if (!buttonsOther[i].checkRelease()) { continue; }
-			bt.writeByte(i + (uint8_t)Command::GrabRubbish);
-			ev3::Console::write("<%d", i + 5);
+			Packet p = { (Command)((uint8_t)Command::GrabRubbish + i), 0 };
+			bt.writeBytes(&p, sizeof(Packet));
+			ev3::Console::write("<%d %d", p.cmd, p.data);
 			break;
 		}
 
@@ -125,9 +117,9 @@ void main_task(intptr_t unused)
 		if (std::abs(powerPercent - prevPowerPercent) > 9) 
 		{ 
 			prevPowerPercent = powerPercent;
-			bt.writeByte((uint8_t)Command::SetPower);
-			bt.writeByte(powerPercent);
-			ev3::Console::write("<%d %d", Command::SetPower, powerPercent);
+			Packet p = { Command::SetPower, powerPercent };
+			bt.writeBytes(&p, sizeof(Packet));
+			ev3::Console::write("<%d %d", p.cmd, p.data);
 
 			char num[5];
 			num[4] = '\0';
